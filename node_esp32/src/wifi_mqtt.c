@@ -10,11 +10,16 @@ static const char *TAG = "WIFI_MQTT";
 void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t event_id, void *event_data)
 {
     esp_mqtt_event_handle_t event = event_data;
+    
     switch (event->event_id) {
 
         case MQTT_EVENT_CONNECTED:
             ESP_LOGI(TAG, "Установлено соединение с брокером MQTT");
-            esp_mqtt_client_subscribe(mqtt_client, LINUX_TOPIC, 2);
+            int msg_id = esp_mqtt_client_subscribe(mqtt_client, LINUX_TOPIC, 2);
+            if (msg_id == -1)
+                ESP_LOGE(TAG, "Ошибка отправки команды на подписку на топик '%s'", LINUX_TOPIC); 
+            else
+                ESP_LOGI(TAG, "Команда на подписку на топик '%s' успешно отправлена, msg_id=%d", LINUX_TOPIC, msg_id);
             break;
 
         case MQTT_EVENT_DISCONNECTED:
@@ -39,6 +44,12 @@ void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t event
                     }
                     portEXIT_CRITICAL(&reading_mux);
                 }
+                else {
+                    ESP_LOGE(TAG,"Получена неизвестная команда: %c\n",command);
+                }
+            }
+            else {
+                ESP_LOGE(TAG,"Получена команда [%.*s] с неверным размером: %d(ожидался 1)\n",event->data,event->data_len,event->data_len);
             }
             break;
         default:
@@ -50,12 +61,12 @@ static void wifi_event_handler_internal(void *arg, esp_event_base_t event_base, 
 {
     // Wi-Fi станция стартовала, можно начинать подключение к точке доступа.
     if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START) {
-        esp_wifi_connect();
+        ESP_ERROR_CHECK(esp_wifi_connect());
     }
     // Потеряли соединение с точкой доступа, пытаемся переподключиться.
     else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) {
         ESP_LOGW(TAG, "Wi-Fi отключился, переподключение...");
-        esp_wifi_connect();
+        ESP_ERROR_CHECK(esp_wifi_connect());
     }
     // Устройство успешно получило IP-адрес от роутера.
     // Теперь можно безопасно инициализировать и запустить MQTT-клиент.
@@ -67,8 +78,8 @@ static void wifi_event_handler_internal(void *arg, esp_event_base_t event_base, 
                 .credentials.client_id = "ESP32_01",
             };
             mqtt_client = esp_mqtt_client_init(&mqtt_cfg);
-            esp_mqtt_client_register_event(mqtt_client, ESP_EVENT_ANY_ID, mqtt_event_handler, NULL);
-            esp_mqtt_client_start(mqtt_client);
+            ESP_ERROR_CHECK(esp_mqtt_client_register_event(mqtt_client, ESP_EVENT_ANY_ID, mqtt_event_handler, NULL));
+            ESP_ERROR_CHECK(esp_mqtt_client_start(mqtt_client));
         }
     }
 }
