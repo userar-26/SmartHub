@@ -29,6 +29,8 @@ void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t event
             if (event->data_len == 1) {
                 char command = event->data[0];
                 if (command == INC_TEMPERATURE || command == DEC_TEMPERATURE) {
+                    // Используем критическую секцию, так как переменная add_temp
+                    // читается в задаче dht11_task, что может привести к гонке данных.
                     portENTER_CRITICAL(&reading_mux);
                     if (command == INC_TEMPERATURE) {
                         add_temp++;
@@ -39,7 +41,6 @@ void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t event
                 }
             }
             break;
-
         default:
             break;
     }
@@ -47,13 +48,17 @@ void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t event
 
 static void wifi_event_handler_internal(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data)
 {
+    // Wi-Fi станция стартовала, можно начинать подключение к точке доступа.
     if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START) {
         esp_wifi_connect();
     }
+    // Потеряли соединение с точкой доступа, пытаемся переподключиться.
     else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) {
         ESP_LOGW(TAG, "Wi-Fi отключился, переподключение...");
         esp_wifi_connect();
     }
+    // Устройство успешно получило IP-адрес от роутера.
+    // Теперь можно безопасно инициализировать и запустить MQTT-клиент.
     else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
         ESP_LOGI(TAG, "IP получен, запуск MQTT...");
         if (mqtt_client == NULL) {

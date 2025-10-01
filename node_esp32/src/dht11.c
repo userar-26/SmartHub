@@ -1,5 +1,7 @@
 #include "config.h"
 
+
+
 void dht11_task(void *PIN)
 {
     esp_err_t res;
@@ -11,7 +13,8 @@ void dht11_task(void *PIN)
 
         if (res == ESP_OK) {
             dht_reading_t reading_to_send = reading;
-
+            // Критическая секция необходима для безопасного доступа к add_temp,
+            // так как эта переменная изменяется в обработчике MQTT.
             portENTER_CRITICAL(&reading_mux);
             reading_to_send.temperature += (add_temp * 10);
             portEXIT_CRITICAL(&reading_mux);
