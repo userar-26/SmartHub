@@ -1,0 +1,27 @@
+# ================ Общие файлы редакторов и ОС ================
+# VS Code
+.vscode/
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+
+
+# ================ PlatformIO (для Arduino и ESP32) ================
+# Папки со сборками, библиотеками и инструментами
+.pio/
+
+# Кэш IntelliSense
+ipch/
+*.ipch
+
+
+# ================ CMake (для hub_linux) ================
+# Папка для сборки
+hub_linux/build/
+
+# Лог-файлы, создаваемые программой
+hub_linux/err_log.txt
+hub_linux/hub_log.txt
