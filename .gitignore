@@ -1,6 +1,7 @@
 # ================ Общие файлы редакторов и ОС ================
 # VS Code
 .vscode/
+*.code-workspace
 
 # macOS
 .DS_Store

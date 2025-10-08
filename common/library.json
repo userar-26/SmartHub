@@ -1,0 +1,12 @@
+{
+  "name": "smarthub_common",
+  "version": "1.0.0",
+  "description": "Общий протокол и библиотека cJSON для проекта SmartHub.",
+  "build": {
+    "srcFilter": [
+      "+<*>",
+      "+<cjson/*>"
+    ],
+    "libLDFMode": "deep"
+  }
+}

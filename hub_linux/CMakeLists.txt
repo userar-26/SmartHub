@@ -3,19 +3,20 @@ project(hub_linux C)
 
 set(CMAKE_C_STANDARD 23)
 
-# --- Исходники ---
+add_subdirectory(../common ${CMAKE_CURRENT_BINARY_DIR}/common)
+
 add_executable(hub_linux 
     src/main.c
     src/common.c
     src/device_io.c
 )
 
-# --- Директории с заголовками ---
 target_include_directories(hub_linux PRIVATE include)
-target_include_directories(hub_linux PRIVATE /usr/include) # обычно mosquitto.h лежит здесь
+target_include_directories(hub_linux PRIVATE /usr/include)
 
-# --- Линки библиотек ---
-target_link_libraries(hub_linux 
+target_link_libraries(hub_linux
+    PRIVATE
+    smarthub_common
     mosquitto
     pthread
 )
