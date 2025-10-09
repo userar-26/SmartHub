@@ -144,42 +144,42 @@ int init_json_commands(void)
 
 void sendDeviceCommand(char com, int arduino_fd, struct mosquitto *mosq) 
 {
-    char c;
-
     switch (com) {
         case 'q':
             exit(0);
             break;
 
         case '1':  // Дверь
-            c = g_is_door_open ? CLOSE_DOOR : OPEN_DOOR;
-            write(arduino_fd, &c, 1);
+            if(g_is_door_open)
+                write(arduino_fd,s_json_cmd_arduino_set_door_close,strlen(s_json_cmd_arduino_set_door_close));
+            else
+                write(arduino_fd,s_json_cmd_arduino_set_door_open,strlen(s_json_cmd_arduino_set_door_open));
             break;
 
         case '2':  // Сигнализация
-            c = g_is_alarm_enabled ? OFF_ALARM : ON_ALARM;
-            write(arduino_fd, &c, 1);
+            if(g_is_alarm_enabled)
+                write(arduino_fd,s_json_cmd_arduino_set_alarm_off,strlen(s_json_cmd_arduino_set_alarm_off));
+            else
+                write(arduino_fd,s_json_cmd_arduino_set_alarm_on,strlen(s_json_cmd_arduino_set_alarm_on));
             break;
 
         case '3':  // Увеличить температуру
-            c = INC_TEMPERATURE;
             if (mosq)
-                mosquitto_publish(mosq, NULL, TOPIC_HUB_TO_ESP32, 1, &c, 0, 0);
+                mosquitto_publish(mosq, NULL, TOPIC_HUB_TO_ESP32, strlen(s_json_cmd_esp32_increase_temp), s_json_cmd_esp32_increase_temp, 2, 0);
             break;
 
         case '4':  // Уменьшить температуру
-            c = DEC_TEMPERATURE;
             if (mosq)
-                mosquitto_publish(mosq, NULL, TOPIC_HUB_TO_ESP32, 1, &c, 0, 0);
+                mosquitto_publish(mosq, NULL, TOPIC_HUB_TO_ESP32, strlen(s_json_cmd_esp32_decrease_temp), s_json_cmd_esp32_decrease_temp, 2, 0);
             break;
 
         case '5':  // Сброс уведомления о движении
-            pthread_mutex_lock(&g_state_mutex);
-            g_is_motion_detected = 0;
-            pthread_mutex_unlock(&g_state_mutex);
+            if(g_is_motion_detected)
+                write(arduino_fd, s_json_cmd_arduino_clear_motion, strlen(s_json_cmd_arduino_clear_motion));
             break;
 
         default:
+            HUB_LOG("SendCommand","Попытка отправить неизвестную команду\n");
             break;
     }
 }
