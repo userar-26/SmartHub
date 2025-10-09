@@ -18,11 +18,10 @@ Thumbs.db
 ipch/
 *.ipch
 
+# ================ CMake ===============
+**/build/
 
 # ================ CMake (для hub_linux) ================
-# Папка для сборки
-hub_linux/build/
-
 # Лог-файлы, создаваемые программой
 hub_linux/err_log.txt
 hub_linux/hub_log.txt
