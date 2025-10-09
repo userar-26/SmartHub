@@ -25,8 +25,10 @@
 #define DEVICE_LIVING_ROOM_LIGHT "living_room_light"
 
 // Команды
-#define CMD_SET_STATE   "set_state"
-#define CMD_GET_DATA    "get_data"
+#define CMD_SET_STATE       "set_state"
+#define CMD_GET_DATA        "get_data"
+#define CMD_TEMP_INCREASE   "increase_temp"
+#define CMD_TEMP_DECREASE   "decrease_temp"
 
 // Состояния
 #define STATE_OPEN      "open"
