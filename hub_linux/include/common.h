@@ -15,6 +15,8 @@
 #include <termios.h>
 #include <string.h>
 #include <mosquitto.h>
+#include "cJSON.h"
+#include "smarthub_protocol.h"
 
 // ================================================================
 // ========================= ENUMS & CONSTANTS ===================
@@ -39,8 +41,6 @@ enum {
 
 // Параметры подключения к устройствам
 #define DEV_ARDUINO "/dev/ttyArduino"
-#define ESP32_TOPIC "smarthub/esp32"
-#define LINUX_TOPIC "smarthub/linux"
 #define MOSQ_PORT 1883
 #define MOSQ_NAME "localhost"
 #define MOSQ_TIME 100

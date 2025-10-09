@@ -38,9 +38,9 @@ void mosq_connect_handler(struct mosquitto *mosq, void *obj, int rc)
         HUB_LOG("MQTT","Успешно подключились к брокеру\n");
 
         // --- Подписываемся на топик от ESP32---
-        int sub_rc = mosquitto_subscribe(mosq, NULL, ESP32_TOPIC, 2);
+        int sub_rc = mosquitto_subscribe(mosq, NULL, TOPIC_ESP32_TO_HUB, 2);
         if(sub_rc != MOSQ_ERR_SUCCESS){
-            HUB_LOG("MQTT", "Ошибка подписки на топик %s\n", ESP32_TOPIC);
+            HUB_LOG("MQTT", "Ошибка подписки на топик %s\n", TOPIC_ESP32_TO_HUB);
         }
     }
     else if(rc == 3){
@@ -64,7 +64,7 @@ void mosq_disconnect_handler(struct mosquitto *mosq, void *obj, int rc)
 void mosq_message_hanler(struct mosquitto *mosq, void *obj, const struct mosquitto_message *msg)
 {
     // Если пришли верные данные, то обрабатываем их
-    if(strcmp(msg->topic, ESP32_TOPIC) == 0 && msg->payloadlen == 4) 
+    if(strcmp(msg->topic, TOPIC_ESP32_TO_HUB) == 0 && msg->payloadlen == 4) 
     {
         int16_t *data = (int16_t *)msg->payload;
         pthread_mutex_lock(&g_state_mutex);
@@ -172,13 +172,13 @@ void sendDeviceCommand(char com, int arduino_fd, struct mosquitto *mosq)
         case '3':  // Увеличить температуру
             c = INC_TEMPERATURE;
             if (mosq)
-                mosquitto_publish(mosq, NULL, LINUX_TOPIC, 1, &c, 0, 0);
+                mosquitto_publish(mosq, NULL, TOPIC_HUB_TO_ESP32, 1, &c, 0, 0);
             break;
 
         case '4':  // Уменьшить температуру
             c = DEC_TEMPERATURE;
             if (mosq)
-                mosquitto_publish(mosq, NULL, LINUX_TOPIC, 1, &c, 0, 0);
+                mosquitto_publish(mosq, NULL, TOPIC_HUB_TO_ESP32, 1, &c, 0, 0);
             break;
 
         case '5':  // Сброс уведомления о движении

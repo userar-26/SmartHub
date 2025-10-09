@@ -15,11 +15,11 @@ void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t event
 
         case MQTT_EVENT_CONNECTED:
             ESP_LOGI(TAG, "Установлено соединение с брокером MQTT");
-            int msg_id = esp_mqtt_client_subscribe(mqtt_client, LINUX_TOPIC, 2);
+            int msg_id = esp_mqtt_client_subscribe(mqtt_client, TOPIC_HUB_TO_ESP32, 2);
             if (msg_id == -1)
-                ESP_LOGE(TAG, "Ошибка отправки команды на подписку на топик '%s'", LINUX_TOPIC); 
+                ESP_LOGE(TAG, "Ошибка отправки команды на подписку на топик '%s'", TOPIC_HUB_TO_ESP32); 
             else
-                ESP_LOGI(TAG, "Команда на подписку на топик '%s' успешно отправлена, msg_id=%d", LINUX_TOPIC, msg_id);
+                ESP_LOGI(TAG, "Команда на подписку на топик '%s' успешно отправлена, msg_id=%d", TOPIC_HUB_TO_ESP32, msg_id);
             break;
 
         case MQTT_EVENT_DISCONNECTED:

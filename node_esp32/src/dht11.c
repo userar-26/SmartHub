@@ -20,7 +20,7 @@ void dht11_task(void *PIN)
             reading_to_send.temperature += (add_temp * 10);
             portEXIT_CRITICAL(&reading_mux);
 
-            int msg_id = esp_mqtt_client_publish(mqtt_client, ESP32_TOPIC, (const char *)&reading_to_send, sizeof(reading_to_send), 2, 1);
+            int msg_id = esp_mqtt_client_publish(mqtt_client, TOPIC_ESP32_TO_HUB, (const char *)&reading_to_send, sizeof(reading_to_send), 2, 1);
 
             if (msg_id == -1)
                 ESP_LOGE(TAG, "Ошибка отправки MQTT сообщения (например, клиент отключен)");

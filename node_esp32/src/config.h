@@ -8,13 +8,13 @@
 #include "mqtt_client.h"
 #include "nvs_flash.h"
 #include "dht.h"
+#include "smarthub_protocol.h"
+#include "cJSON.h"
 
 // Конфигурация Wi-Fi и MQTT
 #define WIFI_SSID       "Xiaomi_541D"
 #define WIFI_PASS       "XTA210991926"
 #define BROKER_URI      "mqtt://192.168.31.166:1883"
-#define ESP32_TOPIC     "smarthub/esp32"
-#define LINUX_TOPIC     "smarthub/linux"
 
 // Параметры/переменные для датчика DHT11
 #define INC_TEMPERATURE 'u'
