@@ -1,5 +1,9 @@
 #include "../include/common.h"
 
+volatile int g_is_door_open;
+volatile int g_is_alarm_enabled;
+volatile int g_is_motion_detected;
+
 void setup(void)
 {
     
@@ -8,55 +12,50 @@ void setup(void)
     pinMode(TRIGGER_PIN,OUTPUT);
     pinMode(ECHO_PIN,INPUT);
 
-    ALARM_STATUS = ON;
-    DOOR_STATUS  = CLOSE;
+    setup_json_responses();
+
+    g_is_door_open        = 0;
+    g_is_alarm_enabled    = 1;
+    g_is_motion_detected  = 0;
 
 }
 
 // --- Настройки таймера ---
-const long SENSOR_READ_INTERVAL = 500; // Опрашивать датчик каждые 500 мс
+const long SENSOR_READ_INTERVAL = 500;  // Как часто проверять датчик
+const long MOTION_SEND_INTERVAL = 1000; // Как часто отправлять уведомление, если есть тревога
 unsigned long lastSensorReadTime = 0;
+unsigned long lastMotionSendTime = 0;
 
 void loop(void)
 {
-
     // --- Блок 1: Обработка входящих команд (выполняется на каждой итерации) ---
-    if(Serial.available() > 0)
+    check_serial_for_command();
+
+    unsigned long currentTime = millis();
+
+    // --- Блок 2: Логика обнаружения и отправки тревоги ---
+
+    if (g_is_alarm_enabled)
     {
-        int command = Serial.read();
+        if (!g_is_motion_detected) {
+            if (currentTime - lastSensorReadTime >= SENSOR_READ_INTERVAL) {
+                lastSensorReadTime = currentTime; // Сбрасываем таймер проверки
 
-        if(command == DOOR_OPEN){
-            DOOR_STATUS = OPEN;
-            Serial.write((uint8_t)DOOR_OPEN);
-        }
-        else if(command == DOOR_CLOSE){
-            DOOR_STATUS = CLOSE;
-            Serial.write((uint8_t)DOOR_CLOSE);
-        }
-        else if(command == ALARM_ON){
-            ALARM_STATUS = ON;
-            Serial.write((uint8_t)ALARM_ON);
-        }
-        else if(command == ALARM_OFF){
-            ALARM_STATUS = OFF;
-            Serial.write((uint8_t)ALARM_OFF);
+                int distance = current_distance_cm(TRIGGER_PIN, ECHO_PIN);
+                if (distance > 0 && distance <= 30)
+                {
+                    g_is_motion_detected = true;
+                }
+            }
         }
 
-    }
-
-    // --- Блок 2: Опрос датчика по таймеру (выполняется только раз в 500 мс) ---
-    if (ALARM_STATUS == ON) 
-    {
-        unsigned long currentTime = millis();
-        if (currentTime - lastSensorReadTime >= SENSOR_READ_INTERVAL) {
-            
-            lastSensorReadTime = currentTime; // Сбрасываем таймер
-
-            int distance = current_distance_cm(TRIGGER_PIN, ECHO_PIN);
-            if (distance > 0 && distance <= 30)
-                Serial.write((uint8_t)MOTION_DETECTED);
-        
+        if (g_is_motion_detected) {
+            if (currentTime - lastMotionSendTime >= MOTION_SEND_INTERVAL) {
+                lastMotionSendTime = currentTime; // Сбрасываем таймер отправки
+                send_motion_detected_event();
+            }
         }
     }
-
+    else
+        g_is_motion_detected = false;
 }
