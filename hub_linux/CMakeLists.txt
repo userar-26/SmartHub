@@ -8,7 +8,9 @@ add_subdirectory(../common ${CMAKE_CURRENT_BINARY_DIR}/common)
 add_executable(hub_linux 
     src/main.c
     src/common.c
-    src/device_io.c
+    src/arduino_serial.c
+    src/hub_commands.c
+    src/esp32_mqtt.c
 )
 
 target_include_directories(hub_linux PRIVATE include)
