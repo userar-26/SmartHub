@@ -1,10 +1,5 @@
 #include "config.h"
 
-// Определение глобальных переменных
-esp_mqtt_client_handle_t mqtt_client = NULL;
-int add_temp = 0;
-portMUX_TYPE reading_mux = portMUX_INITIALIZER_UNLOCKED;
-
 static const char *TAG = "WIFI_MQTT";
 
 void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t event_id, void *event_data)
@@ -14,12 +9,20 @@ void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t event
     switch (event->event_id) {
 
         case MQTT_EVENT_CONNECTED:
-            ESP_LOGI(TAG, "Установлено соединение с брокером MQTT");
-            int msg_id = esp_mqtt_client_subscribe(mqtt_client, TOPIC_HUB_TO_ESP32, 2);
-            if (msg_id == -1)
-                ESP_LOGE(TAG, "Ошибка отправки команды на подписку на топик '%s'", TOPIC_HUB_TO_ESP32); 
-            else
-                ESP_LOGI(TAG, "Команда на подписку на топик '%s' успешно отправлена, msg_id=%d", TOPIC_HUB_TO_ESP32, msg_id);
+            ESP_LOGI(TAG, "Подключено к MQTT. Подписка на команды...");
+            esp_mqtt_client_subscribe(mqtt_client, TOPIC_HUB_TO_ESP32, 1);
+            
+            // Отправляем хабу запрос на получение полного состояния.
+            // Это решает сценарий, когда ESP32 перезапустился, а хаб работал.
+            cJSON *root = cJSON_CreateObject();
+            cJSON_AddStringToObject(root, KEY_COMMAND, CMD_GET_STATE);
+            char *msg = cJSON_PrintUnformatted(root);
+            
+            if (msg) {
+                esp_mqtt_client_publish(mqtt_client, TOPIC_ESP32_TO_HUB, msg, strlen(msg), 1, 0);
+                free(msg);
+            }
+            cJSON_Delete(root);
             break;
 
         case MQTT_EVENT_DISCONNECTED:
@@ -30,27 +33,7 @@ void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t event
             ESP_LOGI(TAG, "Получено сообщение от %.*s: %.*s",
                      event->topic_len, event->topic,
                      event->data_len, event->data);
-
-            if (event->data_len == 1) {
-                char command = event->data[0];
-                if (command == INC_TEMPERATURE || command == DEC_TEMPERATURE) {
-                    // Используем критическую секцию, так как переменная add_temp
-                    // читается в задаче dht11_task, что может привести к гонке данных.
-                    portENTER_CRITICAL(&reading_mux);
-                    if (command == INC_TEMPERATURE) {
-                        add_temp++;
-                    } else {
-                        add_temp--;
-                    }
-                    portEXIT_CRITICAL(&reading_mux);
-                }
-                else {
-                    ESP_LOGE(TAG,"Получена неизвестная команда: %c\n",command);
-                }
-            }
-            else {
-                ESP_LOGE(TAG,"Получена команда [%.*s] с неверным размером: %d(ожидался 1)\n",event->data,event->data_len,event->data_len);
-            }
+            process_json_command(event->data, event->data_len);
             break;
         default:
             break;
