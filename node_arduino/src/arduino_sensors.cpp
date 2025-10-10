@@ -1,4 +1,4 @@
-#include "../include/common.h"
+#include "common.h"
 
 int current_distance_cm(uint8_t trigger_pin,uint8_t echo_pin)
 {

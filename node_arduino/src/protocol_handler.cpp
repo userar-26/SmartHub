@@ -1,17 +1,13 @@
 #include "common.h"
 
-// Эти строки Arduino будет отправлять после успешного выполнения команды от хаба
-static char *s_json_resp_door_open_success  = NULL;
-static char *s_json_resp_door_close_success = NULL;
-static char *s_json_resp_alarm_on_success   = NULL;
-static char *s_json_resp_alarm_off_success  = NULL;
-static char *s_json_resp_motion_clear_success = NULL;
+static char *s_json_resp_door_is_open   = NULL;
+static char *s_json_resp_door_is_close  = NULL;
+static char *s_json_resp_alarm_is_on    = NULL;
+static char *s_json_resp_alarm_is_off   = NULL;
+static char *s_json_resp_motion_cleared = NULL;
 
-// Эту строку Arduino отправит если обнаружено движение
-static char *s_json_event_motion_detected   = NULL;
-
-// Эту строку Arduino отправит если принята неизвестная команда
-static char *s_json_resp_command_error      = NULL;
+static char *s_json_event_motion_detected = NULL;
+static char *s_json_resp_command_error    = NULL;
 
 void send_full_state_response(void)
 {
@@ -39,40 +35,44 @@ void setup_json_responses(void)
 {
     cJSON *root = NULL;
 
-    // --- Ответ: Дверь успешно открыта ---
+    // --- Ответ: Состояние двери - "открыто" ---
     root = cJSON_CreateObject();
     cJSON_AddStringToObject(root, KEY_TYPE, TYPE_RESPONSE);
     cJSON_AddStringToObject(root, KEY_DEVICE, DEVICE_DOOR);
-    cJSON_AddStringToObject(root, KEY_STATUS, STATUS_SUCCESS);
-    cJSON_AddStringToObject(root, KEY_NEW_STATE, STATE_OPEN);
-    s_json_resp_door_open_success = cJSON_PrintUnformatted(root);
+    cJSON_AddStringToObject(root, KEY_STATE, STATE_OPEN);
+    s_json_resp_door_is_open = cJSON_PrintUnformatted(root);
     cJSON_Delete(root);
 
-    // --- Ответ: Дверь успешно закрыта ---
+    // --- Ответ: Состояние двери - "закрыто" ---
     root = cJSON_CreateObject();
     cJSON_AddStringToObject(root, KEY_TYPE, TYPE_RESPONSE);
     cJSON_AddStringToObject(root, KEY_DEVICE, DEVICE_DOOR);
-    cJSON_AddStringToObject(root, KEY_STATUS, STATUS_SUCCESS);
-    cJSON_AddStringToObject(root, KEY_NEW_STATE, STATE_CLOSE);
-    s_json_resp_door_close_success = cJSON_PrintUnformatted(root);
+    cJSON_AddStringToObject(root, KEY_STATE, STATE_CLOSE);
+    s_json_resp_door_is_close = cJSON_PrintUnformatted(root);
     cJSON_Delete(root);
 
-    // --- Ответ: Сигнализация успешно включена ---
+    // --- Ответ: Состояние сигнализации - "включена" ---
     root = cJSON_CreateObject();
     cJSON_AddStringToObject(root, KEY_TYPE, TYPE_RESPONSE);
     cJSON_AddStringToObject(root, KEY_DEVICE, DEVICE_ALARM);
-    cJSON_AddStringToObject(root, KEY_STATUS, STATUS_SUCCESS);
-    cJSON_AddStringToObject(root, KEY_NEW_STATE, STATE_ON);
-    s_json_resp_alarm_on_success = cJSON_PrintUnformatted(root);
+    cJSON_AddStringToObject(root, KEY_STATE, STATE_ON);
+    s_json_resp_alarm_is_on = cJSON_PrintUnformatted(root);
     cJSON_Delete(root);
 
-    // --- Ответ: Сигнализация успешно выключена ---
+    // --- Ответ: Состояние сигнализации - "выключена" ---
     root = cJSON_CreateObject();
     cJSON_AddStringToObject(root, KEY_TYPE, TYPE_RESPONSE);
     cJSON_AddStringToObject(root, KEY_DEVICE, DEVICE_ALARM);
-    cJSON_AddStringToObject(root, KEY_STATUS, STATUS_SUCCESS);
-    cJSON_AddStringToObject(root, KEY_NEW_STATE, STATE_OFF);
-    s_json_resp_alarm_off_success = cJSON_PrintUnformatted(root);
+    cJSON_AddStringToObject(root, KEY_STATE, STATE_OFF);
+    s_json_resp_alarm_is_off = cJSON_PrintUnformatted(root);
+    cJSON_Delete(root);
+
+    // --- Ответ: Состояние тревоги по движению - "сброшено" ---
+    root = cJSON_CreateObject();
+    cJSON_AddStringToObject(root, KEY_TYPE, TYPE_RESPONSE);
+    cJSON_AddStringToObject(root, KEY_DEVICE, DEVICE_MOTION_SENSOR);
+    cJSON_AddStringToObject(root, KEY_STATE, STATE_CLEAR);
+    s_json_resp_motion_cleared = cJSON_PrintUnformatted(root);
     cJSON_Delete(root);
 
     // --- Событие: Обнаружено движение ---
@@ -90,15 +90,6 @@ void setup_json_responses(void)
     cJSON_AddStringToObject(root, KEY_REASON, REASON_UNKNOWN_COMMAND);
     s_json_resp_command_error = cJSON_PrintUnformatted(root);
     cJSON_Delete(root);
-
-    // --- Ответ: Уведомление о движении сброшено ---
-    root = cJSON_CreateObject();
-    cJSON_AddStringToObject(root, KEY_TYPE, TYPE_RESPONSE);
-    cJSON_AddStringToObject(root, KEY_DEVICE, DEVICE_MOTION_SENSOR);
-    cJSON_AddStringToObject(root, KEY_STATUS, STATUS_SUCCESS);
-    cJSON_AddStringToObject(root, KEY_NEW_STATE, RESP_MOTION_CLEARED);
-    s_json_resp_motion_clear_success = cJSON_PrintUnformatted(root);
-    cJSON_Delete(root);
 }
 
 void process_json_command(char* command_str)
@@ -110,8 +101,6 @@ void process_json_command(char* command_str)
     }
 
     cJSON *command_item = cJSON_GetObjectItemCaseSensitive(root, KEY_COMMAND);
-
-    // Проверяем наличие команды
     if (!cJSON_IsString(command_item)) {
         Serial.println(s_json_resp_command_error);
         goto cleanup;
@@ -133,10 +122,10 @@ void process_json_command(char* command_str)
         if (strcmp(device_item->valuestring, DEVICE_DOOR) == 0) {
             if (strcmp(state_item->valuestring, STATE_OPEN) == 0) {
                 g_is_door_open = 1;
-                Serial.println(s_json_resp_door_open_success);
+                Serial.println(s_json_resp_door_is_open);
             } else if (strcmp(state_item->valuestring, STATE_CLOSE) == 0) {
                 g_is_door_open = 0;
-                Serial.println(s_json_resp_door_close_success);
+                Serial.println(s_json_resp_door_is_close);
             } else {
                 Serial.println(s_json_resp_command_error);
             }
@@ -144,10 +133,10 @@ void process_json_command(char* command_str)
         else if (strcmp(device_item->valuestring, DEVICE_ALARM) == 0) {
             if (strcmp(state_item->valuestring, STATE_ON) == 0) {
                 g_is_alarm_enabled = 1;
-                Serial.println(s_json_resp_alarm_on_success);
+                Serial.println(s_json_resp_alarm_is_on);
             } else if (strcmp(state_item->valuestring, STATE_OFF) == 0) {
                 g_is_alarm_enabled = 0;
-                Serial.println(s_json_resp_alarm_off_success);
+                Serial.println(s_json_resp_alarm_is_off);
             } else {
                 Serial.println(s_json_resp_command_error);
             }
@@ -155,7 +144,7 @@ void process_json_command(char* command_str)
         else if (strcmp(device_item->valuestring, DEVICE_MOTION_SENSOR) == 0) {
              if (strcmp(state_item->valuestring, STATE_CLEAR) == 0) {
                 g_is_motion_detected = 0;
-                Serial.println(s_json_resp_motion_clear_success);
+                Serial.println(s_json_resp_motion_cleared);
              }
         }
         else {

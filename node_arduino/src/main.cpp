@@ -1,4 +1,4 @@
-#include "../include/common.h"
+#include "common.h"
 
 volatile int g_is_door_open;
 volatile int g_is_alarm_enabled;
