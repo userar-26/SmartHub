@@ -18,13 +18,12 @@
 #define KEY_VALUES      "values"
 #define KEY_REASON      "reason"
 #define KEY_EVENT       "event"
+#define KEY_STATUS      "status"
 
 // --- Ключи для ответа с полным состоянием ---
 #define KEY_STATE_IS_DOOR_OPEN      "is_door_open"
 #define KEY_STATE_IS_ALARM_ENABLED  "is_alarm_enabled"
 #define KEY_STATE_IS_LIGHT_ON       "is_light_on"
-#define KEY_CURRENT_TEMPERATURE     "current_temperature"
-#define KEY_CURRENT_HUMIDITY        "current_humidity"
 
 // --- Ключи для данных сенсоров ---
 #define KEY_VALUE_TEMPERATURE "temperature"

@@ -5,32 +5,47 @@ static const char *TAG = "WIFI_MQTT";
 void dht11_task(void *PIN)
 {
     esp_err_t res;
-    dht_reading_t reading;
+    float humidity, temperature;
     int dht_pin = *(int*)PIN;
 
     for (;;) {
 
-        res = dht_read_data(DHT_TYPE_DHT11, dht_pin, &reading.humidity, &reading.temperature);
+        if(g_is_synced)
+        {
 
-        if (res == ESP_OK) {
-            dht_reading_t reading_to_send = reading;
-            // Критическая секция необходима для безопасного доступа к add_temp,
-            // так как эта переменная изменяется в обработчике MQTT.
+            int temp_offset;
             portENTER_CRITICAL(&reading_mux);
-            reading_to_send.temperature += (add_temp * 10);
+            temp_offset = g_add_temp;
             portEXIT_CRITICAL(&reading_mux);
 
-            int msg_id = esp_mqtt_client_publish(mqtt_client, TOPIC_ESP32_TO_HUB, (const char *)&reading_to_send, sizeof(reading_to_send), 2, 1);
+            res = dht_read_float_data(DHT_TYPE_DHT11, dht_pin, &humidity, &temperature);
 
-            if (msg_id == -1)
-                ESP_LOGE(TAG, "Ошибка отправки MQTT сообщения (например, клиент отключен)");
+            if (res == ESP_OK) {
+
+                temperature += temp_offset;
+
+                char *msg = create_sensor_data_json(temperature,humidity);
+                if(msg == NULL){
+                    ESP_LOGE(TAG,"Не удалось выделить память для сообщения с значением текущей температуры и влажности\n");
+                    abort();
+                }
+
+                int msg_id = esp_mqtt_client_publish(mqtt_client, TOPIC_ESP32_TO_HUB, msg, strlen(msg), 2, 1);
+
+                free(msg);
+
+                if (msg_id == -1)
+                    ESP_LOGE(TAG, "Ошибка отправки MQTT сообщения");
+                else
+                    ESP_LOGI(TAG, "Сообщение с данными о температуре/влажности успешно отправлено, msg_id=%d", msg_id);
+            } 
             else
-                ESP_LOGI(TAG, "Сообщение с данными о температуре/влажности успешно отправлено, msg_id=%d", msg_id);
-        } 
-        else
-            ESP_LOGE("DHT11", "Не удалось прочитать значения с DHT11");
+                ESP_LOGE("DHT11", "Не удалось прочитать значения с DHT11");
 
-        vTaskDelay(3000 / portTICK_PERIOD_MS);
+            vTaskDelay(3000 / portTICK_PERIOD_MS);
+        }
+        else
+            vTaskDelay(1000 / portTICK_PERIOD_MS);
         
     }
 }
