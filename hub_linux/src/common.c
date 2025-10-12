@@ -2,11 +2,12 @@
 
 // Инициализация глобальных параметров
 pthread_mutex_t g_state_mutex = PTHREAD_MUTEX_INITIALIZER;
-volatile int g_is_door_open          = OFF;
-volatile int g_is_alarm_enabled      = OFF;
+volatile int g_is_door_open          = 0;
+volatile int g_is_alarm_enabled      = 0;
 volatile float g_humidity_percent    = 0;
 volatile float g_temperature_celsius = 0;
 volatile int   g_is_motion_detected  = 0;
+volatile int   g_is_light_on         = 0;
 int g_update_arduino[2];
 int g_update_esp32[2];
 
@@ -31,6 +32,28 @@ void err_quit(const char* format, ...)
     }
 
     exit(1);
+}
+
+ssize_t writen(int fd, const void *vptr, size_t n)
+{
+	size_t		nleft;
+	ssize_t		nwritten;
+	const char	*ptr;
+
+	ptr = vptr;
+	nleft = n;
+	while (nleft > 0) {
+		if ( (nwritten = write(fd, ptr, nleft)) <= 0) {
+			if (nwritten < 0 && errno == EINTR)
+				nwritten = 0;
+			else
+				return(-1);
+		}
+
+		nleft -= nwritten;
+		ptr   += nwritten;
+	}
+	return(n);
 }
 
 void HUB_LOG(const char* tag, const char *format, ...)
@@ -78,6 +101,7 @@ void displayMenu()
     float humidity = g_humidity_percent;
     bool is_door_open = g_is_door_open;
     bool is_alarm_active = g_is_alarm_enabled;
+    bool is_light_on = g_is_light_on;
     pthread_mutex_unlock(&g_state_mutex);
 
     // --- Шаг 2: Рисуем интерфейс ---
@@ -90,6 +114,7 @@ void displayMenu()
     printf("--- СТАТУС СИСТЕМЫ ---\n");
     printf("Дверь:\t\t%s\n", is_door_open ? "Открыта" : "Закрыта");
     printf("Сигнализация:\t%s\n", is_alarm_active ? "Включена" : "Отключена");
+    printf("Свет:\t%s\n", is_light_on ? "Включен" : "Отключен");
     printf("Температура:\t%.1f C\n", temp);
     printf("Влажность:\t%.1f %%\n", humidity);
     printf("Движение: \t%s\n",g_is_motion_detected ? "Обнаружено": "Не обнаружено");
@@ -98,9 +123,10 @@ void displayMenu()
     printf("\n--- МЕНЮ УПРАВЛЕНИЯ ---\n");
     printf("1) Открыть/Закрыть дверь\n");
     printf("2) Включить/Отключить сигнализацию\n");
-    printf("3) Увеличить температуру на 1 градус\n");
-    printf("4) Уменьшить температуру на 1 градус\n");
-    printf("5) Сбросить уведомление о движение\n");
+    printf("3) Включить/Отключить свет\n");
+    printf("4) Увеличить температуру на 1 градус\n");
+    printf("5) Уменьшить температуру на 1 градус\n");
+    printf("6) Сбросить уведомление о движение\n");
     printf("q) Выход\n");
 
     // --- Приглашение к вводу ---

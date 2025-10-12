@@ -95,24 +95,55 @@ void setup_json_responses(void)
 void process_json_command(char* command_str)
 {
     cJSON *root = cJSON_Parse(command_str);
+
+    // Объявляем все переменные в начале функции, чтобы избежать ошибки
+    // компиляции "transfer of control bypasses initialization" при использовании goto.
+    cJSON *type_item = NULL;
+    cJSON *command_item = NULL;
+    cJSON *state_obj = NULL;
+    cJSON *door_item = NULL;
+    cJSON *alarm_item = NULL;
+    cJSON *device_item = NULL;
+    cJSON *state_item = NULL;
+
     if (root == NULL) {
         Serial.println(s_json_resp_command_error);
         return;
     }
 
-    cJSON *command_item = cJSON_GetObjectItemCaseSensitive(root, KEY_COMMAND);
+    // Сначала проверяем, является ли сообщение служебным (для синхронизации).
+    type_item = cJSON_GetObjectItemCaseSensitive(root, KEY_TYPE);
+    if (cJSON_IsString(type_item) && strcmp(type_item->valuestring, TYPE_FULL_STATE) == 0)
+    {
+        // Хаб прислал "желаемое" состояние. Принудительно синхронизируемся с ним.
+        state_obj = cJSON_GetObjectItemCaseSensitive(root, KEY_STATE);
+        if (cJSON_IsObject(state_obj))
+        {
+            door_item = cJSON_GetObjectItemCaseSensitive(state_obj, KEY_STATE_IS_DOOR_OPEN);
+            alarm_item = cJSON_GetObjectItemCaseSensitive(state_obj, KEY_STATE_IS_ALARM_ENABLED);
+
+            if (cJSON_IsBool(door_item)) {
+                g_is_door_open = cJSON_IsTrue(door_item);
+            }
+            if (cJSON_IsBool(alarm_item)) {
+                g_is_alarm_enabled = cJSON_IsTrue(alarm_item);
+            }
+        }
+        goto cleanup;
+    }
+
+    // Если это не сообщение для синхронизации, ищем ключ "command".
+    command_item = cJSON_GetObjectItemCaseSensitive(root, KEY_COMMAND);
     if (!cJSON_IsString(command_item)) {
         Serial.println(s_json_resp_command_error);
         goto cleanup;
     }
 
-    // --- Логика обработки команд ---
-
-    // 1. Обрабатываем команду "set_state"
+    // Обработка стандартных команд
     if (strcmp(command_item->valuestring, CMD_SET_STATE) == 0)
     {
-        cJSON *device_item = cJSON_GetObjectItemCaseSensitive(root, KEY_DEVICE);
-        cJSON *state_item = cJSON_GetObjectItemCaseSensitive(root, KEY_STATE);
+        device_item = cJSON_GetObjectItemCaseSensitive(root, KEY_DEVICE);
+        state_item = cJSON_GetObjectItemCaseSensitive(root, KEY_STATE);
 
         if (!cJSON_IsString(device_item) || !cJSON_IsString(state_item)) {
             Serial.println(s_json_resp_command_error);
@@ -151,12 +182,10 @@ void process_json_command(char* command_str)
             Serial.println(s_json_resp_command_error);
         }
     }
-    // 2. Обрабатываем команду "get_state"
     else if (strcmp(command_item->valuestring, CMD_GET_STATE) == 0)
     {
         send_full_state_response();
     }
-    // 3. Если ни одна команда не подошла
     else
     {
         Serial.println(s_json_resp_command_error);
