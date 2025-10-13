@@ -114,7 +114,7 @@ void displayMenu()
     printf("--- СТАТУС СИСТЕМЫ ---\n");
     printf("Дверь:\t\t%s\n", is_door_open ? "Открыта" : "Закрыта");
     printf("Сигнализация:\t%s\n", is_alarm_active ? "Включена" : "Отключена");
-    printf("Свет:\t%s\n", is_light_on ? "Включен" : "Отключен");
+    printf("Свет:\t\t%s\n", is_light_on ? "Включен" : "Отключен");
     printf("Температура:\t%.1f C\n", temp);
     printf("Влажность:\t%.1f %%\n", humidity);
     printf("Движение: \t%s\n",g_is_motion_detected ? "Обнаружено": "Не обнаружено");

@@ -21,9 +21,9 @@
 // ================================================================
 
 // Конфигурация Wi-Fi и MQTT
-#define WIFI_SSID       "Xiaomi_541D"
-#define WIFI_PASS       "XTA210991926"
-#define BROKER_URI      "mqtt://192.168.31.166:1883"
+#define WIFI_SSID       "SSID"
+#define WIFI_PASS       "PASSWORD"
+#define BROKER_URI      "mqtt://IP:1883"
 
 // Конфигурация для DHT11
 static const int LIGHT_PIN = GPIO_NUM_22;

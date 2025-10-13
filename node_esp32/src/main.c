@@ -12,6 +12,7 @@ void app_main(void)
     // Настраиваем пин для света
     gpio_reset_pin(LIGHT_PIN);
     gpio_set_direction(LIGHT_PIN, GPIO_MODE_OUTPUT);
+    gpio_set_level(LIGHT_PIN,1);
 
     // Инициализируем статические JSON-сообщения
     if (init_esp32_json_messages() != ESP_OK)
@@ -21,5 +22,5 @@ void app_main(void)
     esp_wifi_mqtt_conf();
 
     // Создаем задачу, которая считывает данные с датчика, и отправляет их
-    xTaskCreate(dht11_task, "DHT11", 2048, &DHT_PIN, 5, NULL);
+    xTaskCreate(dht11_task, "DHT11", 2048, (void *const)&DHT_PIN, 5, NULL);
 }

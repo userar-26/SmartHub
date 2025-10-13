@@ -302,9 +302,9 @@ void sendDeviceCommand(char com, int arduino_fd, struct mosquitto *mosq)
 
         case '3':  // Свет
             if(g_is_light_on)
-                mosquitto_publish(mosq, NULL, TOPIC_HUB_TO_ESP32, strlen(s_json_cmd_esp32_set_light_on), s_json_cmd_esp32_set_light_on, 2, 0);
-            else
                 mosquitto_publish(mosq, NULL, TOPIC_HUB_TO_ESP32, strlen(s_json_cmd_esp32_set_light_off), s_json_cmd_esp32_set_light_off, 2, 0);
+            else
+                mosquitto_publish(mosq, NULL, TOPIC_HUB_TO_ESP32, strlen(s_json_cmd_esp32_set_light_on), s_json_cmd_esp32_set_light_on, 2, 0);
             break;
 
         case '4':  // Увеличить температуру

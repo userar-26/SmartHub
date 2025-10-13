@@ -144,21 +144,34 @@ void process_json_command(const char *data, int len)
 
                 if (cJSON_IsNumber(temp_item)) {
                     float hub_temp = temp_item->valuedouble;
-                    float local_temp, humidity;
-                    
-                    // Считываем текущую температуру с датчика
-                    if (dht_read_float_data(DHT_TYPE_DHT11, DHT_PIN, &humidity, &local_temp) == ESP_OK) {
-                        // Вычисляем и сохраняем смещение
+                    float local_temp = 0, humidity = 0;
+                    esp_err_t dht_res = ESP_FAIL;
+                    int retries = 5; // Делаем 5 попыток прочитать датчик
+
+                    ESP_LOGI(TAG, "Пытаюсь прочитать DHT-датчик для синхронизации...");
+                    while(retries > 0) {
+                        dht_res = dht_read_float_data(DHT_TYPE_DHT11, DHT_PIN, &humidity, &local_temp);
+                        if (dht_res == ESP_OK) {
+                            break;
+                        }
+                        ESP_LOGW(TAG, "Попытка чтения DHT не удалась, осталось %d попыток...", retries - 1);
+                        vTaskDelay(500 / portTICK_PERIOD_MS);
+                        retries--;
+                    }
+
+                    if (dht_res == ESP_OK) {
                         portENTER_CRITICAL(&reading_mux);
                         g_add_temp = (int)(hub_temp - local_temp);
                         portEXIT_CRITICAL(&reading_mux);
                         ESP_LOGI(TAG, "Синхронизация температуры: Hub=%.1f, Local=%.1f, Offset установлен в %d", hub_temp, local_temp, g_add_temp);
+                    } else {
+                        ESP_LOGE(TAG, "Не удалось прочитать DHT-датчик после нескольких попыток. Синхронизация температуры не удалась.");
                     }
                 }
 
                 if (cJSON_IsBool(light_item)) {
                     g_is_light_on = cJSON_IsTrue(light_item);
-                    gpio_set_level(LIGHT_PIN, g_is_light_on);
+                    gpio_set_level(LIGHT_PIN, !g_is_light_on);
                     ESP_LOGI(TAG, "Синхронизация света: состояние установлено в %s", g_is_light_on ? "ON" : "OFF");
                 }
             }
@@ -210,14 +223,14 @@ void process_json_command(const char *data, int len)
         if (cJSON_IsString(device_item) && strcmp(device_item->valuestring, DEVICE_LIVING_ROOM_LIGHT) == 0)
         {
             if (cJSON_IsString(state_item) && strcmp(state_item->valuestring, STATE_ON) == 0) {
-                gpio_set_level(LIGHT_PIN, 1);
+                gpio_set_level(LIGHT_PIN, 0);
                 g_is_light_on = true;
                 ESP_LOGI(TAG, "Свет включен");
                 if (g_json_resp_light_on) {
                     esp_mqtt_client_publish(mqtt_client, TOPIC_ESP32_TO_HUB, g_json_resp_light_on, strlen(g_json_resp_light_on), 1, 0);
                 }
             } else if (cJSON_IsString(state_item) && strcmp(state_item->valuestring, STATE_OFF) == 0) {
-                gpio_set_level(LIGHT_PIN, 0);
+                gpio_set_level(LIGHT_PIN, 1);
                 g_is_light_on = false;
                 ESP_LOGI(TAG, "Свет выключен");
                 if (g_json_resp_light_off) {
