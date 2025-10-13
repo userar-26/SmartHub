@@ -128,7 +128,47 @@ void process_json_command(const char *data, int len)
         return;
     }
 
-    // 3. Извлекаем команду
+    cJSON *type_item = cJSON_GetObjectItemCaseSensitive(root, KEY_TYPE);
+
+    // 3. Если пришло сообщение с полным состоянием от хаба
+    if (cJSON_IsString(type_item) && strcmp(type_item->valuestring, TYPE_FULL_STATE) == 0)
+    {
+        ESP_LOGI(TAG, "Получено полное состояние от хаба для синхронизации.");
+
+        // Эта логика выполняется только один раз при первом подключении
+        if (!g_is_synced) {
+            cJSON *state_obj = cJSON_GetObjectItemCaseSensitive(root, KEY_STATE);
+            if (cJSON_IsObject(state_obj)) {
+                cJSON *temp_item = cJSON_GetObjectItemCaseSensitive(state_obj, KEY_VALUE_TEMPERATURE);
+                cJSON *light_item = cJSON_GetObjectItemCaseSensitive(state_obj, KEY_STATE_IS_LIGHT_ON);
+
+                if (cJSON_IsNumber(temp_item)) {
+                    float hub_temp = temp_item->valuedouble;
+                    float local_temp, humidity;
+                    
+                    // Считываем текущую температуру с датчика
+                    if (dht_read_float_data(DHT_TYPE_DHT11, DHT_PIN, &humidity, &local_temp) == ESP_OK) {
+                        // Вычисляем и сохраняем смещение
+                        portENTER_CRITICAL(&reading_mux);
+                        g_add_temp = (int)(hub_temp - local_temp);
+                        portEXIT_CRITICAL(&reading_mux);
+                        ESP_LOGI(TAG, "Синхронизация температуры: Hub=%.1f, Local=%.1f, Offset установлен в %d", hub_temp, local_temp, g_add_temp);
+                    }
+                }
+
+                if (cJSON_IsBool(light_item)) {
+                    g_is_light_on = cJSON_IsTrue(light_item);
+                    gpio_set_level(LIGHT_PIN, g_is_light_on);
+                    ESP_LOGI(TAG, "Синхронизация света: состояние установлено в %s", g_is_light_on ? "ON" : "OFF");
+                }
+            }
+        }
+        // В любом случае, после получения полного состояния мы считаемся синхронизированными
+        g_is_synced = true;
+        goto cleanup;
+    }
+
+    // 4. Извлекаем команду
     cJSON *command_item = cJSON_GetObjectItemCaseSensitive(root, KEY_COMMAND);
     if (!cJSON_IsString(command_item)) {
         if (g_json_resp_command_error) {
@@ -137,7 +177,7 @@ void process_json_command(const char *data, int len)
         goto cleanup;
     }
 
-    // --- 4. Основная логика обработки команд ---
+    // --- 5. Основная логика обработки команд ---
 
     // Команда: Запросить полное состояние
     if (strcmp(command_item->valuestring, CMD_GET_STATE) == 0)
@@ -194,7 +234,7 @@ void process_json_command(const char *data, int len)
         }
     }
 
-    // --- 5. Логика синхронизации ---
+    // --- 6. Логика синхронизации ---
     if (!g_is_synced) {
         ESP_LOGI(TAG, "Синхронизация с хабом установлена!");
         g_is_synced = true;

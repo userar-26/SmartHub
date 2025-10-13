@@ -1,11 +1,16 @@
 #include "common.h"
 
+int g_is_synced = 0;
+
 int main(void)
 {
     pthread_t arduino_tid, esp32_tid;
     fd_set m_set;
     char input_buffer[BUF_SIZE];
     int maxfd;
+
+    // Инициализируем строки json командами
+    init_json_commands();
 
     if (pipe(g_update_arduino) == -1)
         err_quit("Не удалось создать pipe для Arduino\n");
@@ -24,11 +29,18 @@ int main(void)
     if(pthread_create(&arduino_tid, NULL,arduinoThread, (void *)&arduino_fd) != 0)
         err_quit("Не удалось создать поток для arduino");
 
+    // Запуск периодической синхронизации с arduino
+    setup_periodic_sync_timer(arduino_fd);
+
+    // Запрашиваем текущее состояние у плат
+    request_full_state_from_arduino(arduino_fd);
+    request_full_state_from_esp32(mosq);
+
     for(;;)
     {
         displayMenu(); // Отображаем меню и текущий статус
 
-        // Настраиваем pselect, для ожидания данных с клавиатуры
+        // Настраиваем pselect, для ожидания данных с клавиатуры,esp32,arduino
         FD_ZERO(&m_set);
         FD_SET(STDIN_FILENO, &m_set);
         FD_SET(g_update_arduino[0], &m_set);
