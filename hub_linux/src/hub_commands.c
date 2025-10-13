@@ -176,7 +176,7 @@ int init_json_commands(void)
     
     cleanup:
         cJSON_Delete(root);
-        HUB_LOG("JSON","Не удалось выполнить инициализацию json команд\n");
+        HUB_LOG("JSON","Не удалось выполнить инициализацию json команд");
         return -1;
 }
 
@@ -235,7 +235,7 @@ void send_full_state_to_esp32(struct mosquitto *mosq)
     if (msg != NULL && mosq != NULL) {
         mosquitto_publish(mosq, NULL, TOPIC_HUB_TO_ESP32, strlen(msg), msg, 1, 0);
         free(msg);
-        HUB_LOG("SYNC", "Отправлено полное состояние на ESP32 для синхронизации.\n");
+        HUB_LOG("SYNC", "Отправлено полное состояние на ESP32 для синхронизации.");
     }
 }
 
@@ -243,7 +243,7 @@ void send_full_state_to_arduino(int fd)
 {
     cJSON *root = cJSON_CreateObject();
     if (root == NULL) {
-        HUB_LOG("SYNC", "Ошибка создания JSON для отправки состояния на Arduino\n");
+        HUB_LOG("SYNC", "Ошибка создания JSON для отправки состояния на Arduino");
         return;
     }
 
@@ -267,7 +267,7 @@ void send_full_state_to_arduino(int fd)
         writen(fd, msg, strlen(msg));
         writen(fd, "\n", 1);
         free(msg);
-        HUB_LOG("SYNC", "Отправлено полное состояние на Arduino для синхронизации.\n");
+        HUB_LOG("SYNC", "Отправлено полное состояние на Arduino для синхронизации.");
     }
 }
 
@@ -325,7 +325,7 @@ void sendDeviceCommand(char com, int arduino_fd, struct mosquitto *mosq)
             break;
 
         default:
-            HUB_LOG("SendCommand","Попытка отправить неизвестную команду\n");
+            HUB_LOG("SendCommand","Попытка отправить неизвестную команду");
             break;
     }
 }

@@ -6,20 +6,20 @@ void mosq_connect_handler(struct mosquitto *mosq, void *obj, int rc)
 {
     if(rc == 0)
     {
-        HUB_LOG("MQTT","Успешно подключились к брокеру\n");
+        HUB_LOG("MQTT","Успешно подключились к брокеру");
 
         // --- Подписываемся на топик от ESP32---
         int sub_rc = mosquitto_subscribe(mosq, NULL, TOPIC_ESP32_TO_HUB, 2);
         if(sub_rc != MOSQ_ERR_SUCCESS){
-            HUB_LOG("MQTT", "Ошибка подписки на топик %s\n", TOPIC_ESP32_TO_HUB);
+            HUB_LOG("MQTT", "Ошибка подписки на топик %s", TOPIC_ESP32_TO_HUB);
         }
     }
     else if(rc == 3){
         mosquitto_connect_async(mosq,MOSQ_NAME,MOSQ_PORT,MOSQ_TIME);
-        HUB_LOG("MQTT","Ошибка: Сервер брокера недоступен, попытка переподключится\n");
+        HUB_LOG("MQTT","Ошибка: Сервер брокера недоступен, попытка переподключится");
     }
     else{
-        err_quit("Критическая ошибка: Не удалось установить соединение с брокером\n");
+        err_quit("Критическая ошибка: Не удалось установить соединение с брокером");
     }
 }
 
@@ -41,7 +41,7 @@ void mosq_message_hanler(struct mosquitto *mosq, void *obj, const struct mosquit
 
     cJSON *root = cJSON_Parse(resp_str);
     if (root == NULL){
-        HUB_LOG("MQTT", "Ошибка парсинга JSON от ESP32: %s\n", resp_str);
+        HUB_LOG("MQTT", "Ошибка парсинга JSON от ESP32: %s", resp_str);
         return;
     }
 
@@ -59,7 +59,7 @@ void mosq_message_hanler(struct mosquitto *mosq, void *obj, const struct mosquit
     // Если это не команда, ищем ключ "type" для определения типа сообщения
     cJSON *type_item = cJSON_GetObjectItemCaseSensitive(root, KEY_TYPE);
     if (!cJSON_IsString(type_item)) {
-        HUB_LOG("MQTT", "Получен JSON без ключа 'type' или 'command' от ESP32.\n");
+        HUB_LOG("MQTT", "Получен JSON без ключа 'type' или 'command' от ESP32.");
         goto cleanup;
     }
 
@@ -95,9 +95,9 @@ void mosq_message_hanler(struct mosquitto *mosq, void *obj, const struct mosquit
         {
             cJSON *reas_item = cJSON_GetObjectItemCaseSensitive(root, KEY_REASON);
             if (cJSON_IsString(reas_item) && strcmp(reas_item->valuestring, REASON_UNKNOWN_COMMAND) == 0) {
-                HUB_LOG("MQTT", "ESP32 сообщил об ошибке: неизвестная команда.\n");
+                HUB_LOG("MQTT", "ESP32 сообщил об ошибке: неизвестная команда.");
             } else {
-                HUB_LOG("MQTT", "ESP32 сообщил о неизвестной ошибке.\n");
+                HUB_LOG("MQTT", "ESP32 сообщил о неизвестной ошибке.");
             }
         }
         else // Если это не ошибка, значит это успешный ответ
