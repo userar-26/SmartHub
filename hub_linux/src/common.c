@@ -10,6 +10,8 @@ volatile int   g_is_motion_detected  = 0;
 volatile int   g_is_light_on         = 0;
 int g_update_arduino[2];
 int g_update_esp32[2];
+int g_sync_pipe[2];
+int g_is_synced = 0;
 
 void err_quit(const char* format, ...) 
 {

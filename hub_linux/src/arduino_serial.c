@@ -1,20 +1,17 @@
 #include "common.h"
 
-static int s_arduino_fd = -1;
-
 static void timer_handler(int signum)
 {
-    if (s_arduino_fd != -1) {
-        send_full_state_to_arduino(s_arduino_fd);
+    if (g_sync_pipe[1] != -1) {
+        char byte = 'S';
+        write(g_sync_pipe[1], &byte, 1);
     }
 }
 
-void setup_periodic_sync_timer(int arduino_fd)
+void setup_periodic_sync_timer(void)
 {
     struct sigaction sa;
     struct itimerval timer;
-
-    s_arduino_fd = arduino_fd;
 
     // 1. Настраиваем обработчик для сигнала SIGALRM
     memset(&sa, 0, sizeof(sa));

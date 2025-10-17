@@ -1,7 +1,5 @@
 #include "common.h"
 
-int g_is_synced = 0;
-
 int main(void)
 {
     pthread_t arduino_tid, esp32_tid;
@@ -16,6 +14,8 @@ int main(void)
         err_quit("Не удалось создать pipe для Arduino\n");
     if (pipe(g_update_esp32) == -1)
         err_quit("Не удалось создать pipe для ESP32\n");
+    if (pipe(g_sync_pipe) == -1) 
+        err_quit("Не удалось создать pipe для таймера синхронизации hub_linux с Arduino\n");
 
     int arduino_fd = open_and_configure_arduino_port();
     if (arduino_fd < 0)
@@ -30,7 +30,7 @@ int main(void)
         err_quit("Не удалось создать поток для arduino");
 
     // Запуск периодической синхронизации с arduino
-    setup_periodic_sync_timer(arduino_fd);
+    setup_periodic_sync_timer();
 
     // Запрашиваем текущее состояние у esp32
     while(!g_is_synced) {
@@ -47,6 +47,7 @@ int main(void)
         FD_SET(STDIN_FILENO, &m_set);
         FD_SET(g_update_arduino[0], &m_set);
         FD_SET(g_update_esp32[0], &m_set);
+        FD_SET(g_sync_pipe[0], &m_set);
 
         maxfd = STDIN_FILENO;
         if (g_update_arduino[0] > maxfd) maxfd = g_update_arduino[0];
@@ -71,6 +72,11 @@ int main(void)
             if(FD_ISSET(g_update_esp32[0],&m_set)){
                 char temp_buf[1];
                 read(g_update_esp32[0], temp_buf, 1);
+            }
+            if (FD_ISSET(g_sync_pipe[0], &m_set)) {
+                char temp_buf[1];
+                read(g_sync_pipe[0], temp_buf, 1); 
+                send_full_state_to_arduino(arduino_fd);
             }
         }
     }

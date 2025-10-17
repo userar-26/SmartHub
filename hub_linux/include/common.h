@@ -41,6 +41,7 @@
 extern pthread_mutex_t g_state_mutex;
 extern int g_update_arduino[2];
 extern int g_update_esp32[2];
+extern int g_sync_pipe[2];
 extern int g_is_synced;
 
 // Состояние устройств / сенсоров
@@ -131,7 +132,7 @@ void process_arduino_json(const char* json_string);
 // Настраивает и запускает системный таймер для
 // периодической отправки полного состояния на Arduino.
 // ------------------------------------------------
-void setup_periodic_sync_timer(int arduino_fd);
+void setup_periodic_sync_timer(void);
 
 // ------------------------------------------------
 // Гарантированно записывает N байт в файловый дескриптор,
